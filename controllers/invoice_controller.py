@@ -1,7 +1,6 @@
-from services.gpt_service import extract_total_with_gpt
+from services.invoice_service import extract_total_with_gpt
 from utils.file_utils import validate_file, convert_to_base64
 from werkzeug.utils import secure_filename
-import os
 
 def extract_invoice_total(file):
     """

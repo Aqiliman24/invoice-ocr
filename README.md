@@ -91,8 +91,8 @@ invoice-ocr/
 │   └── invoice_routes.py
 ├── controllers/        # Request handling logic
 │   └── invoice_controller.py
-├── services/           # GPT-related logic
-│   └── gpt_service.py
+├── services/           # Invoice extraction logic
+│   └── invoice_service.py
 ├── utils/              # File and image handling
 │   └── file_utils.py
 ├── requirements.txt    # Dependencies
