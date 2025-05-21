@@ -28,9 +28,7 @@ jobs:
       - name: Run Docker container
         run: |
           docker run -d \
-            -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
             -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
-            -e PORT=${{ secrets.PORT }} \
             -e HOST=${{ secrets.HOST }} \
             -p 5050:5050 \
             --name invoice-extractor-container invoice-extractor
