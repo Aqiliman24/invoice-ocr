@@ -76,6 +76,16 @@ def main():
         result = response.json()
         total_amount = result.get('total_amount', 'N/A')
         handwriting = result.get('handwriting', None)
+
+        # Fix: If total_amount is a string containing JSON, parse it
+        if isinstance(total_amount, str) and total_amount.strip().startswith('{'):
+            try:
+                import json as _json
+                parsed = _json.loads(total_amount)
+                total_amount = parsed.get('total_amount', total_amount)
+                handwriting = parsed.get('handwriting', handwriting)
+            except Exception:
+                pass
         img_data_url = file_to_display_base64(filepath)
         results.append({'filename': os.path.basename(filepath), 'total_amount': total_amount, 'handwriting': handwriting, 'img_data_url': img_data_url, 'error': None, 'time_taken': elapsed})
         handwriting_str = f", Handwritten: {handwriting}" if handwriting is not None else ""

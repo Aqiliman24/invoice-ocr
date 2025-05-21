@@ -2,7 +2,7 @@ from services.invoice_service import extract_total_with_gpt
 from utils.file_utils import validate_file, convert_to_base64
 from werkzeug.utils import secure_filename
 
-def extract_invoice_total(file):
+def extract_invoice_total(file, mode="base64"):
     """
     Process the uploaded invoice file and extract the total amount
     
@@ -23,10 +23,23 @@ def extract_invoice_total(file):
     try:
         # Convert file to base64 (handles both images and PDFs)
         base64_image = convert_to_base64(file)
-        
-        # Extract total amount and handwriting flag using GPT-4o
-        result = extract_total_with_gpt(base64_image)
-        # result is a dict: {"total_amount": ..., "handwriting": ...}
-        return result
+        total_amount, handwriting = extract_total_with_gpt(base64_image)
+        # Parse total_amount to float if possible
+        if isinstance(total_amount, str):
+            import re
+            match = re.search(r"([\d,.]+)", total_amount.replace(',', ''))
+            if match:
+                try:
+                    total_amount_value = round(float(match.group(1)), 2)
+                except Exception:
+                    total_amount_value = total_amount
+            else:
+                total_amount_value = total_amount
+        else:
+            total_amount_value = total_amount
+        return {
+            "handwriting": handwriting,
+            "total_amount": total_amount_value
+        }
     except Exception as e:
         raise ValueError(f"Error processing invoice: {str(e)}")

@@ -23,7 +23,7 @@ def extract_total():
     
     try:
         # Process the file and extract total amount
-        result = extract_invoice_total(file)
+        result = extract_invoice_total(file, mode="file")
         return jsonify(result)
     except Exception as e:
         import traceback
