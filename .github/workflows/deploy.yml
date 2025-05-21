@@ -1,0 +1,57 @@
+name: Invoice Extractor API
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      # Optionally, build and push Docker image to a registry here if needed
+      # - name: Build Docker image
+      #   run: docker build -t invoice-extractor .
+      # - name: Log in to DockerHub (optional)
+      #   uses: docker/login-action@v3
+      #   with:
+      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
+      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # - name: Push image (optional)
+      #   run: docker push invoice-extractor
+
+      - name: Deploy to remote server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          script: |
+            cd ~/invoice-ocr
+            git pull origin main
+            docker stop invoice-extractor-container || true
+            docker rm invoice-extractor-container || true
+            docker build -t invoice-extractor .
+            docker run -d \
+              -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
+              -e HOST=${{ secrets.HOST }} \
+              -p 5050:5050 \
+              --name invoice-extractor-container invoice-extractor
+
+      - name: Cleanup sensitive files
+        run: |
+          rm -f .env || true
