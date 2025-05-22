@@ -9,9 +9,9 @@ env:
   IMAGE_NAME: invoice-extractor
   IMAGE_TAG: latest
   IMAGE_FILE: invoice-extractor.tar
-  DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-  DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-  DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+  DEPLOY_HOST: ${{ secrets.SERVER_IP }}
+  DEPLOY_USER: ${{ secrets.SERVER_USER }}
+  DEPLOY_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
 
 jobs:
   deploy:
