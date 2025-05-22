@@ -8,7 +8,6 @@ env:
   DEPLOY_HOST: ${{ secrets.SERVER_IP }}
   DEPLOY_USER: ${{ secrets.SERVER_USER }}
   DEPLOY_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
-  DEPLOY_SSH_PASSPHRASE: ${{ secrets.SERVER_SSH_PASSPHRASE }}
 
 on:
   push:
@@ -29,7 +28,6 @@ jobs:
           host: ${{ env.DEPLOY_HOST }}
           username: ${{ env.DEPLOY_USER }}
           key: ${{ env.DEPLOY_SSH_KEY }}
-          passphrase: ${{ env.DEPLOY_SSH_PASSPHRASE }}
           port: 22
           script: |
             cd ~/invoice-ocr
@@ -39,6 +37,6 @@ jobs:
             docker build -t invoice-extractor .
             docker run -d \
               -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
-              -e HOST=${{ secrets.HOST }} \ 
+              -e HOST=${{ secrets.HOST }} \
               -p 5050:5050 \
               --name invoice-extractor-container invoice-extractor
