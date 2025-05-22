@@ -1,53 +1,56 @@
-name: Invoice Extractor API
-
-permissions:
-  contents: read
-  packages: write
+name: Deploy Invoice Extractor
 
 on:
   push:
     branches:
       - main
 
+env:
+  IMAGE_NAME: invoice-extractor
+  IMAGE_TAG: latest
+  IMAGE_FILE: invoice-extractor.tar
+  DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+  DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+  DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup SSH Known Hosts
+      - name: Build Docker image
         run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+          docker build -t ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} .
 
-      - name: Deploy to Remote Server via SSH
+      - name: Save image to tar file
+        run: |
+          docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} -o ${{ env.IMAGE_FILE }}
+
+      - name: Copy image to server via SCP
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
+          source: ${{ env.IMAGE_FILE }}
+          target: ~
+
+      - name: Deploy on server via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          port: 22
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
           script: |
-            set -e  # Exit immediately if a command fails
-            echo "[INFO] Pulling latest code..."
-            cd ~/invoice-ocr
-            git pull origin main
-
-            echo "[INFO] Stopping existing container..."
+            docker load -i ${{ env.IMAGE_FILE }}
             docker stop invoice-extractor-container || true
             docker rm invoice-extractor-container || true
-
-            echo "[INFO] Building Docker image..."
-            docker build --pull --no-cache -t invoice-extractor .
-
-            echo "[INFO] Running container..."
             docker run -d \
               --name invoice-extractor-container \
               -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
               -e HOST=${{ secrets.HOST }} \
               -p 5050:5050 \
-              invoice-extractor
-
-            echo "[INFO] Deployment successful 🎉"
+              ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
