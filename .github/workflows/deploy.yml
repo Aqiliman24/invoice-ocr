@@ -39,6 +39,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ env.DEPLOY_HOST }}
+          port: ${{ env.DEPLOY_PORT }}
           username: ${{ env.DEPLOY_USER }}
           key: ${{ env.DEPLOY_SSH_KEY }}
           script: |
@@ -49,7 +50,5 @@ jobs:
               --restart unless-stopped \
               --name invoice-extractor-container \
               -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
-              -e HOST=0.0.0.0 \
-              -p PORT=5050:5050 \
               ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
  

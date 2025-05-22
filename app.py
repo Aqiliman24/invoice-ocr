@@ -16,6 +16,6 @@ app = Flask(__name__)
 app.register_blueprint(invoice_bp)
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT"))
-    host = os.environ.get("HOST")
+    port = 5050
+    host = "0.0.0.0"
     app.run(debug=True, port=port, host=host)
