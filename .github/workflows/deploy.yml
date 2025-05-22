@@ -50,5 +50,7 @@ jobs:
               --restart unless-stopped \
               --name invoice-extractor-container \
               -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
+              -p 5050:5050 \
+              -e HOST=0.0.0.0 \
               ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
  
