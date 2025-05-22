@@ -4,11 +4,6 @@ permissions:
   contents: read
   packages: write
 
-env:
-  DEPLOY_HOST: ${{ secrets.SERVER_IP }}
-  DEPLOY_USER: ${{ secrets.SERVER_USER }}
-  DEPLOY_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
-
 on:
   push:
     branches:
@@ -17,26 +12,42 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    steps:
-      # 1. Checkout your code
-      - uses: actions/checkout@v3
 
-      # 2. Deploy to server via SSH using appleboy/ssh-action
-      - name: Deploy to remote server via SSH
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup SSH Known Hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to Remote Server via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ env.DEPLOY_HOST }}
-          username: ${{ env.DEPLOY_USER }}
-          key: ${{ env.DEPLOY_SSH_KEY }}
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
           port: 22
           script: |
+            set -e  # Exit immediately if a command fails
+            echo "[INFO] Pulling latest code..."
             cd ~/invoice-ocr
             git pull origin main
+
+            echo "[INFO] Stopping existing container..."
             docker stop invoice-extractor-container || true
             docker rm invoice-extractor-container || true
-            docker build -t invoice-extractor .
+
+            echo "[INFO] Building Docker image..."
+            docker build --pull --no-cache -t invoice-extractor .
+
+            echo "[INFO] Running container..."
             docker run -d \
+              --name invoice-extractor-container \
               -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
               -e HOST=${{ secrets.HOST }} \
               -p 5050:5050 \
-              --name invoice-extractor-container invoice-extractor
+              invoice-extractor
+
+            echo "[INFO] Deployment successful 🎉"
