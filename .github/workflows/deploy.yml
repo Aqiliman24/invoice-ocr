@@ -7,6 +7,8 @@ permissions:
 env:
   DEPLOY_HOST: ${{ secrets.SERVER_IP }}
   DEPLOY_USER: ${{ secrets.SERVER_USER }}
+  DEPLOY_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+  DEPLOY_SSH_PASSPHRASE: ${{ secrets.SERVER_SSH_PASSPHRASE }}
 
 on:
   push:
@@ -20,16 +22,16 @@ jobs:
       # 1. Checkout your code
       - uses: actions/checkout@v3
 
-      # 2. Set up SSH key for authentication
-      - name: Set up SSH key
-        uses: webfactory/ssh-agent@v0.8.0
+      # 2. Deploy to server via SSH using appleboy/ssh-action
+      - name: Deploy to remote server via SSH
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
-
-      # 3. Deploy to server via SSH
-      - name: Deploy via SSH
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} "
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
+          passphrase: ${{ env.DEPLOY_SSH_PASSPHRASE }}
+          port: 22
+          script: |
             cd ~/invoice-ocr
             git pull origin main
             docker stop invoice-extractor-container || true
@@ -37,7 +39,6 @@ jobs:
             docker build -t invoice-extractor .
             docker run -d \
               -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
-              -e HOST=${{ secrets.HOST }} \
+              -e HOST=${{ secrets.HOST }} \ 
               -p 5050:5050 \
               --name invoice-extractor-container invoice-extractor
-          "
