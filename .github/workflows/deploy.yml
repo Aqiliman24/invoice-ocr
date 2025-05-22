@@ -50,5 +50,6 @@ jobs:
               --name invoice-extractor-container \
               -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
               -e HOST=0.0.0.0 \
-              -p 5050:5050 \
+              -p PORT=5050:5050 \
               ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+ 
