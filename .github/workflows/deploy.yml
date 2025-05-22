@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  IMAGE_NAME: invoice-extractor
+  IMAGE_NAME: your-dockerhub-username/invoice-extractor
   IMAGE_TAG: latest
   DEPLOY_HOST: ${{ secrets.SERVER_IP }}
   DEPLOY_USER: ${{ secrets.SERVER_USER }}
@@ -33,6 +33,7 @@ jobs:
       - name: Push Docker image to Docker Hub
         run: |
           docker push ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          docker logout
 
       - name: Deploy on server via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -41,12 +42,13 @@ jobs:
           username: ${{ env.DEPLOY_USER }}
           key: ${{ env.DEPLOY_SSH_KEY }}
           script: |
-            docker pull ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            docker pull --quiet ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
             docker stop invoice-extractor-container || true
             docker rm invoice-extractor-container || true
             docker run -d \
+              --restart unless-stopped \
               --name invoice-extractor-container \
               -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
               -e HOST=0.0.0.0 \
-              -p 5050:5050 \ 
+              -p 5050:5050 \
               ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
