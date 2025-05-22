@@ -1,5 +1,13 @@
 name: Invoice Extractor API
 
+permissions:
+  contents: read
+  packages: write
+
+env:
+  DEPLOY_HOST: ${{ secrets.SERVER_IP }}
+  DEPLOY_USER: ${{ secrets.SERVER_USER }}
+
 on:
   push:
     branches:
@@ -9,38 +17,19 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      # 1. Checkout your code
+      - uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      # 2. Set up SSH key for authentication
+      - name: Set up SSH key
+        uses: webfactory/ssh-agent@v0.8.0
         with:
-          python-version: '3.10'
+          ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
 
-      - name: Install dependencies
+      # 3. Deploy to server via SSH
+      - name: Deploy via SSH
         run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-      # Optionally, build and push Docker image to a registry here if needed
-      # - name: Build Docker image
-      #   run: docker build -t invoice-extractor .
-      # - name: Log in to DockerHub (optional)
-      #   uses: docker/login-action@v3
-      #   with:
-      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
-      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
-      # - name: Push image (optional)
-      #   run: docker push invoice-extractor
-
-      - name: Deploy to remote server via SSH
-        uses: appleboy/ssh-action@v1.0.3  
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          port: 22
-          script: |
+          ssh -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} "
             cd ~/invoice-ocr
             git pull origin main
             docker stop invoice-extractor-container || true
@@ -51,7 +40,4 @@ jobs:
               -e HOST=${{ secrets.HOST }} \
               -p 5050:5050 \
               --name invoice-extractor-container invoice-extractor
-
-      - name: Cleanup sensitive files
-        run: |
-          rm -f .env || true
+          "
