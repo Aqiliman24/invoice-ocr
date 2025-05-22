@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  IMAGE_NAME: your-dockerhub-username/invoice-extractor
+  IMAGE_NAME: aqiliman24/invoice-extractor
   IMAGE_TAG: latest
   DEPLOY_HOST: ${{ secrets.SERVER_IP }}
   DEPLOY_USER: ${{ secrets.SERVER_USER }}
