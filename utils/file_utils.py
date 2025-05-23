@@ -56,10 +56,12 @@ def _process_pdf(file):
     Returns:
         str: Base64-encoded image data
     """
-    # Save the uploaded file temporarily
-    temp_path = 'temp_file.pdf'
-    file.save(temp_path)
-    
+    import tempfile
+
+    # Save the uploaded file to a unique temporary file
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+        temp_path = tmp.name
+        file.save(temp_path)
     try:
         # Convert the first page of the PDF to an image
         images = pdf2image.convert_from_path(
@@ -67,18 +69,14 @@ def _process_pdf(file):
             first_page=1,
             last_page=1
         )
-        
         if not images:
             raise ValueError("Failed to extract page from PDF")
-        
         # Get the first page image
         image = images[0]
-        
         # Convert image to base64
         buffered = BytesIO()
         image.save(buffered, format="JPEG")
         img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
-        
         return img_str
     finally:
         # Clean up temporary file
