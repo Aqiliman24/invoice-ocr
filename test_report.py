@@ -7,11 +7,12 @@ from io import BytesIO
 from pdf2image import convert_from_path
 import argparse
 
+# API_URL = 'https://ai.medkad.com/ocr/api/extract-total'
 API_URL = 'http://localhost:5050/extract-total'
 SUPPORTED_EXTS = {'.pdf', '.png', '.jpg', '.jpeg'}
 
 CLAIMS_DIR = 'claims'
-DEFAULT_NUM_FILES = 5
+DEFAULT_NUM_FILES = 10
 
 def file_to_display_base64(filepath):
     ext = os.path.splitext(filepath)[1].lower()
