@@ -24,6 +24,7 @@ def extract_total():
     try:
         # Process the file and extract total amount
         result = extract_invoice_total(file, mode="file")
+        print(f"Processed file: {file.filename}, total_amount: {result.get('total_amount')}, handwriting: {result.get('handwriting')}")
         return jsonify(result)
     except Exception as e:
         import traceback
