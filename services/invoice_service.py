@@ -163,4 +163,5 @@ def process_invoice(file, initial_pages=1, fallback_pages=3, prioritize_last_pag
             print(f"Fallback attempt failed: {str(e)}")
             reset_file()
     
-    raise ValueError("No valid amount found in the invoice")
+    # Return None for total_amount if no valid amount found
+    return None, date, handwriting

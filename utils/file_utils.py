@@ -90,13 +90,16 @@ def _process_pdf(file, first_page=1, last_page=None):
         list: List of dicts with 'page' number and 'image' data
     """
     original_position = file.tell()
-    
-    # Create a temporary file to work with
-    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-        temp_path = tmp.name
-        file.save(temp_path)
+    temp_path = None
     
     try:
+        # Create a temporary file to work with
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            temp_path = tmp.name
+            file_content = file.read()
+            tmp.write(file_content)
+            tmp.flush()
+            
         # Get total pages to validate page range
         with open(temp_path, 'rb') as f:
             total_pages = len(PyPDF2.PdfReader(f).pages)
@@ -114,7 +117,8 @@ def _process_pdf(file, first_page=1, last_page=None):
             first_page=first_page,
             last_page=last_page,
             dpi=200,
-            fmt='jpeg'
+            fmt='jpeg',
+            poppler_path='/usr/bin'
         )
         
         if not images:
