@@ -124,19 +124,23 @@ def _process_pdf(file, first_page=1, last_page=None):
             last_page = min(last_page, total_pages)
         
         # Try different DPI settings if needed
-        dpi_options = [200, 150, 300, 100]
+        dpi_options = [150, 200, 300, 100]  # 150 DPI first since it works well
         last_error = None
         
         for dpi in dpi_options:
             try:
-                print(f"Attempting PDF conversion with DPI: {dpi}")
+                # Convert the specified pages of the PDF to images with optimized settings
                 images = pdf2image.convert_from_path(
                     temp_path, 
                     first_page=first_page,
                     last_page=last_page,
                     dpi=dpi,
                     fmt='jpeg',
-                    poppler_path='/usr/bin'
+                    poppler_path='/usr/bin',
+                    thread_count=2,  # Use multiple threads
+                    grayscale=True,  # Convert to grayscale for faster processing
+                    size=(1500, None),  # Limit max width while maintaining aspect ratio
+                    use_pdftocairo=True  # Usually faster than pdftoppm
                 )
                 
                 if images:
