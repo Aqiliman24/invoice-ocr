@@ -61,13 +61,13 @@ jobs:
             docker pull --quiet ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
             
             # Stop and remove existing containers
-            docker-compose down
+            docker compose down
             
             # Start new containers
-            docker-compose up -d
+            docker compose up -d
             
             # Verify deployment
-            docker-compose ps
+            docker compose ps
             
             # Clean up unused images
             docker image prune -f
