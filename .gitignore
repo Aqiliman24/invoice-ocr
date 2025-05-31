@@ -3,3 +3,4 @@ venv
 .DS_Store
 claims  
 failed-claims
+report.html
