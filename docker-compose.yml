@@ -23,9 +23,8 @@ services:
         condition: on-failure
         max_attempts: 3
         window: 120s
-    # For local development, use a port range
     ports:
-      - "5050-5053:5050"
+      - "${PORT:-5050}:5050"
     networks:
       - invoice-net
     restart: unless-stopped
