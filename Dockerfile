@@ -30,4 +30,4 @@ EXPOSE 5050
 ENV PYTHONUNBUFFERED=1
 
 # Run with Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:5050", "--workers", "2", "--worker-class", "gthread", "--threads", "2", "--worker-connections", "50", "--timeout", "300", "--access-logfile", "-", "--error-logfile", "-", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5050", "--workers", "4", "--worker-class", "gthread", "--threads", "4", "--worker-connections", "100", "--timeout", "300", "--access-logfile", "-", "--error-logfile", "-", "app:app"]
