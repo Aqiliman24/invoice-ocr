@@ -66,7 +66,9 @@ def get_pdf_page_count(file):
         # Create a temporary file to read the PDF
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
             temp_path = tmp.name
-            file.save(temp_path)
+            file_content = file.read()
+            tmp.write(file_content)
+            tmp.flush()
         
         # Get page count
         with open(temp_path, 'rb') as f:
@@ -111,18 +113,22 @@ def _process_pdf(file, first_page=1, last_page=None):
         else:
             last_page = min(last_page, total_pages)
             
-        # Convert the specified pages of the PDF to images
-        images = pdf2image.convert_from_path(
-            temp_path, 
-            first_page=first_page,
-            last_page=last_page,
-            dpi=200,
-            fmt='jpeg',
-            poppler_path='/usr/bin'
-        )
-        
-        if not images:
-            raise ValueError("Failed to extract pages from PDF")
+        try:
+            # Convert the specified pages of the PDF to images
+            images = pdf2image.convert_from_path(
+                temp_path, 
+                first_page=first_page,
+                last_page=last_page,
+                dpi=200,
+                fmt='jpeg',
+                poppler_path='/usr/bin'
+            )
+            
+            if not images:
+                raise ValueError("PDF conversion returned no images")
+        except Exception as e:
+            print(f"PDF conversion error - File size: {len(file_content)} bytes, Pages: {total_pages}, Error: {str(e)}")
+            raise ValueError(f"Failed to convert PDF: {str(e)}")
             
         # Convert images to base64
         results = []
