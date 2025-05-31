@@ -11,6 +11,9 @@ RUN apt-get update && \
         libxext6 \
         libxrender-dev \
         curl \
+        ghostscript \
+        qpdf \
+        pdftk \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory

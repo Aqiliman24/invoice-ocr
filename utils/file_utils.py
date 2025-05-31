@@ -99,12 +99,22 @@ def _process_pdf(file, first_page=1, last_page=None):
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
             temp_path = tmp.name
             file_content = file.read()
+            if len(file_content) == 0:
+                raise ValueError("Empty PDF file")
             tmp.write(file_content)
             tmp.flush()
-            
-        # Get total pages to validate page range
-        with open(temp_path, 'rb') as f:
-            total_pages = len(PyPDF2.PdfReader(f).pages)
+        
+        # Verify PDF is valid
+        try:
+            with open(temp_path, 'rb') as f:
+                pdf = PyPDF2.PdfReader(f)
+                if len(pdf.pages) == 0:
+                    raise ValueError("PDF has no pages")
+                total_pages = len(pdf.pages)
+                # Try to access first page to verify PDF is readable
+                pdf.pages[0].extract_text()
+        except Exception as e:
+            raise ValueError(f"Invalid or corrupted PDF: {str(e)}")
             
         # Validate and adjust page range
         first_page = max(1, min(first_page, total_pages))
@@ -112,23 +122,35 @@ def _process_pdf(file, first_page=1, last_page=None):
             last_page = first_page
         else:
             last_page = min(last_page, total_pages)
-            
-        try:
-            # Convert the specified pages of the PDF to images
-            images = pdf2image.convert_from_path(
-                temp_path, 
-                first_page=first_page,
-                last_page=last_page,
-                dpi=200,
-                fmt='jpeg',
-                poppler_path='/usr/bin'
-            )
-            
-            if not images:
-                raise ValueError("PDF conversion returned no images")
-        except Exception as e:
-            print(f"PDF conversion error - File size: {len(file_content)} bytes, Pages: {total_pages}, Error: {str(e)}")
-            raise ValueError(f"Failed to convert PDF: {str(e)}")
+        
+        # Try different DPI settings if needed
+        dpi_options = [200, 150, 300, 100]
+        last_error = None
+        
+        for dpi in dpi_options:
+            try:
+                print(f"Attempting PDF conversion with DPI: {dpi}")
+                images = pdf2image.convert_from_path(
+                    temp_path, 
+                    first_page=first_page,
+                    last_page=last_page,
+                    dpi=dpi,
+                    fmt='jpeg',
+                    poppler_path='/usr/bin'
+                )
+                
+                if images:
+                    print(f"Successfully converted PDF at {dpi} DPI")
+                    break
+            except Exception as e:
+                last_error = e
+                print(f"Failed conversion at {dpi} DPI: {str(e)}")
+                continue
+        
+        if not images:
+            error_msg = f"PDF conversion failed - Size: {len(file_content)} bytes, Pages: {total_pages}, Last error: {str(last_error)}"
+            print(error_msg)
+            raise ValueError(error_msg)
             
         # Convert images to base64
         results = []
