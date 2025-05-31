@@ -10,11 +10,11 @@ services:
       replicas: ${INSTANCE_COUNT:-2} 
       resources:
         limits:
-          cpus: '0.4'
-          memory: 512M
-        reservations:
-          cpus: '0.2'
+          cpus: '0.25'
           memory: 384M
+        reservations:
+          cpus: '0.15'
+          memory: 256M
       update_config:
         parallelism: 1
         delay: 10s
@@ -23,9 +23,8 @@ services:
         condition: on-failure
         max_attempts: 3
         window: 120s
-    # For local development, use a port range
     ports:
-      - "5050-5053:5050"
+      - "${PORT:-5050}:5050"
     networks:
       - invoice-net
     restart: unless-stopped

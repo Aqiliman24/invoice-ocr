@@ -56,6 +56,7 @@ jobs:
             # Setup environment variables
             echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
             echo "INSTANCE_COUNT=2" >> .env
+            echo "PORT=5050" >> .env  # First instance port
             
             # Pull latest image
             docker pull --quiet ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
