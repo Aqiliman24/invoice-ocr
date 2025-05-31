@@ -11,7 +11,7 @@ import argparse
 API_URL = 'http://localhost:5050/extract-total'
 SUPPORTED_EXTS = {'.pdf', '.png', '.jpg', '.jpeg'}
 
-CLAIMS_DIR = 'claims'
+CLAIMS_DIR = 'failed-claims'
 DEFAULT_NUM_FILES = 10
 
 def file_to_display_base64(filepath):
@@ -77,6 +77,7 @@ def main():
         result = response.json()
         total_amount = result.get('total_amount', 'N/A')
         handwriting = result.get('handwriting', None)
+        date = result.get('date', 'N/A')
 
         # Fix: If total_amount is a string containing JSON, parse it
         if isinstance(total_amount, str) and total_amount.strip().startswith('{'):
@@ -85,12 +86,25 @@ def main():
                 parsed = _json.loads(total_amount)
                 total_amount = parsed.get('total_amount', total_amount)
                 handwriting = parsed.get('handwriting', handwriting)
+                date = parsed.get('date', date)
             except Exception:
                 pass
         img_data_url = file_to_display_base64(filepath)
-        results.append({'filename': os.path.basename(filepath), 'total_amount': total_amount, 'handwriting': handwriting, 'img_data_url': img_data_url, 'error': None, 'time_taken': elapsed})
+        result_data = {
+            'filename': os.path.basename(filepath),
+            'total_amount': total_amount,
+            'handwriting': handwriting,
+            'img_data_url': img_data_url,
+            'error': None,
+            'time_taken': elapsed
+        }
+        # Only add date if it was successfully extracted
+        if date != 'N/A':
+            result_data['date'] = date
+        results.append(result_data)
         handwriting_str = f", Handwritten: {handwriting}" if handwriting is not None else ""
-        print(f"OK (Time: {elapsed:.2f}s){handwriting_str}")
+        date_str = f", Date: {date}" if date != 'N/A' else ""
+        print(f"OK (Time: {elapsed:.2f}s){handwriting_str}{date_str}")
 
     # Generate HTML report
     html = '''
@@ -121,10 +135,14 @@ def main():
         handwriting_html = ''
         if r.get('handwriting') is not None:
             handwriting_html = f'<div class="value" style="font-size:1em;color:#555;">Handwritten: {r["handwriting"]}</div>'
+        date_html = ''
+        if 'date' in r:
+            date_html = f'<div class="value" style="font-size:1em;color:#555;">Date: {r["date"]}</div>'
         html += f'''<div class="card">
             <div class="filename">{r['filename']}</div>
             <div class="value">{r['total_amount']}</div>
             {handwriting_html}
+            {date_html}
             <div class="value" style="font-size:1em;color:#555;">Time: {r['time_taken']:.2f}s</div>
             {'<div class="error">'+r['error']+'</div>' if r['error'] else ''}
             {f'<img src="{r["img_data_url"]}" class="img-preview" alt="Invoice Preview" />' if r['img_data_url'] else ''}

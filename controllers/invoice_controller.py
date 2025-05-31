@@ -1,5 +1,5 @@
-from services.invoice_service import extract_total_with_gpt
-from utils.file_utils import validate_file, convert_to_base64
+from services.invoice_service import process_invoice
+from utils.file_utils import validate_file
 from werkzeug.utils import secure_filename
 
 def extract_invoice_total(file, mode="base64"):
@@ -21,9 +21,9 @@ def extract_invoice_total(file, mode="base64"):
         raise ValueError(f"Invalid file format. Supported formats: PDF, PNG, JPG, JPEG")
     
     try:
-        # Convert file to base64 (handles both images and PDFs)
-        base64_image = convert_to_base64(file)
-        total_amount, handwriting = extract_total_with_gpt(base64_image)
+        # Process the invoice using the service layer
+        total_amount, date, handwriting = process_invoice(file)
+        
         # Parse total_amount to float if possible
         if isinstance(total_amount, str):
             import re
@@ -37,9 +37,11 @@ def extract_invoice_total(file, mode="base64"):
                 total_amount_value = total_amount
         else:
             total_amount_value = total_amount
-        return {
+            
+        return {    
             "handwriting": handwriting,
-            "total_amount": total_amount_value
+            "total_amount": total_amount_value,
+            "date": date
         }
     except Exception as e:
         raise ValueError(f"Error processing invoice: {str(e)}")
