@@ -1,5 +1,6 @@
 import os
 import base64
+import tempfile
 from PIL import Image
 from io import BytesIO
 import pdf2image
@@ -19,69 +20,123 @@ def validate_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
-def convert_to_base64(file):
+def convert_to_base64(file, page_range=None):
     """
-    Convert the uploaded file to base64 encoding
-    - If PDF, extracts first page and converts to image
-    - If image, processes directly
+    Convert the uploaded file to base64 encoded images
     
     Args:
         file: The uploaded file object
+        page_range: Tuple of (first_page, last_page) or None for single page
         
     Returns:
-        str: Base64-encoded image data
+        list: List of dicts with 'page' and 'image' data
         
     Raises:
         ValueError: If file conversion fails
     """
-    filename = file.filename.lower()
+    filename = file.filename.lower() if hasattr(file, 'filename') else 'unknown'
     
     try:
         if filename.endswith('.pdf'):
-            # For PDF files, extract the first page and convert to image
+            if page_range and len(page_range) == 2:
+                return _process_pdf(file, first_page=page_range[0], last_page=page_range[1])
             return _process_pdf(file)
         else:
-            # For image files, process directly
-            return _process_image(file)
+            # For single image files, wrap in the same format
+            return [{
+                'page': 1,
+                'image': _process_image(file)
+            }]
     except Exception as e:
         raise ValueError(f"Error converting file to base64: {str(e)}")
 
-def _process_pdf(file):
+def get_pdf_page_count(file):
     """
-    Process a PDF file by converting its first page to an image and then to base64
+    Get the total number of pages in a PDF file
     
     Args:
         file: The PDF file object
         
     Returns:
-        str: Base64-encoded image data
+        int: Total number of pages
     """
-    import tempfile
+    original_position = file.tell()
+    
+    try:
+        # Create a temporary file to read the PDF
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            temp_path = tmp.name
+            file.save(temp_path)
+        
+        # Get page count
+        with open(temp_path, 'rb') as f:
+            return len(PyPDF2.PdfReader(f).pages)
+    finally:
+        # Clean up and reset file position
+        if 'temp_path' in locals() and os.path.exists(temp_path):
+            os.remove(temp_path)
+        file.seek(original_position)
 
-    # Save the uploaded file to a unique temporary file
+def _process_pdf(file, first_page=1, last_page=None):
+    """
+    Process a PDF file by converting specified pages to images
+    
+    Args:
+        file: The PDF file object
+        first_page: First page to process (1-based)
+        last_page: Last page to process (inclusive), None for single page
+        
+    Returns:
+        list: List of dicts with 'page' number and 'image' data
+    """
+    original_position = file.tell()
+    
+    # Create a temporary file to work with
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
         temp_path = tmp.name
         file.save(temp_path)
+    
     try:
-        # Convert the first page of the PDF to an image
+        # Get total pages to validate page range
+        with open(temp_path, 'rb') as f:
+            total_pages = len(PyPDF2.PdfReader(f).pages)
+            
+        # Validate and adjust page range
+        first_page = max(1, min(first_page, total_pages))
+        if last_page is None:
+            last_page = first_page
+        else:
+            last_page = min(last_page, total_pages)
+            
+        # Convert the specified pages of the PDF to images
         images = pdf2image.convert_from_path(
             temp_path, 
-            first_page=1,
-            last_page=1
+            first_page=first_page,
+            last_page=last_page,
+            dpi=200,
+            fmt='jpeg'
         )
+        
         if not images:
-            raise ValueError("Failed to extract page from PDF")
-        # Get the first page image
-        image = images[0]
-        # Convert image to base64
-        buffered = BytesIO()
-        image.save(buffered, format="JPEG")
-        img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
-        return img_str
+            raise ValueError("Failed to extract pages from PDF")
+            
+        # Convert images to base64
+        results = []
+        for i, image in enumerate(images):
+            buffered = BytesIO()
+            image.save(buffered, format="JPEG", quality=85)
+            img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
+            results.append({
+                'page': first_page + i,
+                'image': img_str
+            })
+            
+        return results
     finally:
-        # Clean up temporary file
-        if os.path.exists(temp_path):
+        # Clean up temporary file and reset file position
+        if 'temp_path' in locals() and os.path.exists(temp_path):
             os.remove(temp_path)
+        file.seek(original_position)
 
 def _process_image(file):
     """

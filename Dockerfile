@@ -10,6 +10,7 @@ RUN apt-get update && \
         libsm6 \
         libxext6 \
         libxrender-dev \
+        curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -28,5 +29,5 @@ EXPOSE 5050
 # Set environment variables (can be overridden at runtime)
 ENV PYTHONUNBUFFERED=1
 
-# Entrypoint to run the Flask app
-CMD ["python", "app.py"]
+# Run with Gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:5050", "--workers", "4", "--timeout", "300", "--access-logfile", "-", "--error-logfile", "-", "app:app"]

@@ -1,7 +1,8 @@
-from flask import Flask
+from flask import Flask, jsonify
 from routes.invoice_routes import invoice_bp
 import os
 from dotenv import load_dotenv
+import argparse
 
 # Load environment variables
 load_dotenv()
@@ -15,7 +16,15 @@ app = Flask(__name__)
 # Register blueprints
 app.register_blueprint(invoice_bp)
 
+# Add health check endpoint
+@app.route('/health')
+def health_check():
+    return jsonify({'status': 'healthy'})
+
+# Configure app for production
+app.config['ENV'] = 'production'
+app.config['DEBUG'] = False
+
 if __name__ == '__main__':
-    port = 5050
-    host = "0.0.0.0"
-    app.run(debug=True, port=port, host=host)
+    # Only used for development
+    app.run(host="0.0.0.0", port=5050, debug=False)

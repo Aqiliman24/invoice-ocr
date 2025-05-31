@@ -11,6 +11,7 @@ env:
   DEPLOY_HOST: ${{ secrets.SERVER_IP }}
   DEPLOY_USER: ${{ secrets.SERVER_USER }}
   DEPLOY_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+  INSTANCE_COUNT: 4  # Number of instances to deploy
 
 jobs:
   deploy:
@@ -35,22 +36,42 @@ jobs:
           docker push ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           docker logout
 
+      - name: Copy docker-compose file to server
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
+          source: "docker-compose.yml"
+          target: "~/invoice-ocr"
+
       - name: Deploy on server via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ env.DEPLOY_HOST }}
-          port: ${{ env.DEPLOY_PORT }}
           username: ${{ env.DEPLOY_USER }}
           key: ${{ env.DEPLOY_SSH_KEY }}
           script: |
+            cd ~/invoice-ocr
+            # Setup environment variables
+            echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
+            echo "INSTANCE_COUNT=4" >> .env
+            
+            # Pull latest image
             docker pull --quiet ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-            docker stop invoice-extractor-container || true
-            docker rm invoice-extractor-container || true
-            docker run -d \
-              --restart unless-stopped \
-              --name invoice-extractor-container \
-              -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
-              -p 5050:5050 \
-              -e HOST=0.0.0.0 \
-              ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            
+            # Stop and remove existing containers
+            docker-compose down
+            
+            # Start new containers
+            docker-compose up -d
+            
+            # Verify deployment
+            docker-compose ps
+            
+            # Clean up unused images
+            docker image prune -f
+            
+            # Reload Nginx to pick up changes
+            sudo systemctl reload nginx
  

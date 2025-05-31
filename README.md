@@ -60,10 +60,12 @@ POST /extract-total
 ```json
 {
   "total_amount": "$123.45",
+  "date": "2025-05-31",
   "handwriting": false
 }
 ```
 - `total_amount`: The extracted total amount (with currency symbol)
+- `date`: The invoice date in YYYY-MM-DD format
 - `handwriting`: Whether the invoice total/items are handwritten (`true` or `false`)
 
 
@@ -101,12 +103,46 @@ invoice-ocr/
 ├── .dockerignore       # Docker build ignore rules
 └── .env                # Environment variables (not in repository)
 ```
-## Docker run 
+## Docker Deployment
 
-```
+### Single Container
+```bash
 docker build -t invoice-extractor .
 docker run --env-file .env -p 5050:5050 invoice-extractor
 ```
+
+### Multi-Container with Docker Compose
+
+For production deployment with multiple instances and load balancing:
+
+1. Create a `.env` file with your configuration:
+```bash
+OPENAI_API_KEY=your_api_key_here
+INSTANCE_COUNT=4  # Number of container instances
+```
+
+2. Start the service:
+```bash
+# Build and start containers
+docker compose up --build -d
+
+# View container logs
+docker compose logs -f
+
+# Scale service (optional)
+docker compose up -d --scale invoice-ocr=4
+
+# Stop service
+docker compose down
+```
+
+The service will run multiple instances with:
+- Gunicorn WSGI server (4 workers per container)
+- Health checks and automatic restarts
+- Resource limits and reservations
+- Load balancing ready (when used with Nginx)
+
+Access the API at `http://localhost:5050` or through your configured Nginx reverse proxy.
 
 ## Environment & Troubleshooting
 
