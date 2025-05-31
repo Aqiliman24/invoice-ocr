@@ -24,45 +24,51 @@ def extract_total_with_gpt(images_data, system_prompt=None, max_retries=2):
 
     client = OpenAI(api_key=OPENAI_API_KEY)
     
-    # Prepare image contents with page numbers
+    # Prepare image contents with page numbers - optimized to reduce string operations
+    total_pages = images_data[-1]['page']
     image_contents = []
     for img_data in images_data:
-        image_contents.append({
-            "type": "text",
-            "text": f"PAGE {img_data['page']} of {images_data[-1]['page']}"
-        })
-        image_contents.append({
-            "type": "image_url",
-            "image_url": {"url": f"data:image/jpeg;base64,{img_data['image']}"}
-        })
+        # Combine text and image in one append to reduce list operations
+        image_contents.extend([
+            {
+                "type": "text",
+                "text": f"PAGE {img_data['page']} of {total_pages}"
+            },
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{img_data['image']}"}
+            }
+        ])
     
+    # Prepare message once to avoid rebuilding on retries
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": system_prompt},
+                *image_contents
+            ]
+        }
+    ]
+
     # Try multiple times in case of API failures
     for attempt in range(max_retries + 1):
         try:
             response = client.chat.completions.create(
                 model=GPT_MODEL,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "text", 
-                                "text": system_prompt
-                            },
-                            *image_contents
-                        ]
-                    }
-                ],
+                messages=messages,
                 max_tokens=MAX_TOKENS,
-                response_format={"type": "json_object"}
+                response_format={"type": "json_object"},
+                temperature=0  # Reduce randomness for faster processing
             )
             
             result = json.loads(response.choices[0].message.content.strip())
-            total = result.get('total_amount')
-            date = result.get('date')
-            handwriting = result.get('handwriting', False)
-            return total, date, handwriting
+            return (
+                result.get('total_amount'),
+                result.get('date'),
+                result.get('handwriting', False)
+            )
             
         except Exception as e:
             if attempt == max_retries:
