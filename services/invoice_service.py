@@ -80,8 +80,12 @@ def process_invoice(file, initial_pages=1, fallback_pages=3, prioritize_last_pag
         prioritize_last_page: If True, process last page first (default: False)
         
     Returns:
-        tuple: (total_amount, handwriting)
+        tuple: (total_amount, date, handwriting)
     """
+    # Initialize variables with default values
+    date = None
+    handwriting = False
+    
     def reset_file():
         if hasattr(file, 'seek'):
             file.seek(0)
