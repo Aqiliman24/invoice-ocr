@@ -7,8 +7,8 @@ from io import BytesIO
 from pdf2image import convert_from_path
 import argparse
 
-# API_URL = 'https://ai.medkad.com/ocr/api/extract-total'
-API_URL = 'http://localhost:5050/extract-total'
+API_URL = 'https://ai.medkad.com/ocr/api/extract-total'
+# API_URL = 'http://localhost:5050/extract-total'
 SUPPORTED_EXTS = {'.pdf', '.png', '.jpg', '.jpeg'}
 
 CLAIMS_DIR = 'failed-claims'
