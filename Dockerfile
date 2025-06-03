@@ -47,7 +47,7 @@ CMD ["gunicorn", "--bind", "0.0.0.0:5050", \
      "--max-requests", "10000", \
      "--max-requests-jitter", "1000", \
      "--timeout", "300", \
-     "--keepalive", "2", \
+     "--keep-alive", "2", \
      "--access-logfile", "-", \
      "--error-logfile", "-", \
      "app:app"]
