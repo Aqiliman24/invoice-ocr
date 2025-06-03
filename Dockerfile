@@ -33,5 +33,21 @@ EXPOSE 5050
 ENV PYTHONUNBUFFERED=1
 
 # Run with Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:5050", "--workers", "8", "--worker-class", "gthread", "--threads", "16", "--worker-connections", "1000", "--timeout", "300", "--access-logfile", "-", "--error-logfile", "-", "app:app"]
- 
+# Optimize system limits for many concurrent connections
+RUN echo "* soft nofile 65535" >> /etc/security/limits.conf && \
+    echo "* hard nofile 65535" >> /etc/security/limits.conf
+
+# Run with Gunicorn optimized for single core
+CMD ["gunicorn", "--bind", "0.0.0.0:5050", \
+     "--workers", "4", \
+     "--worker-class", "gthread", \
+     "--threads", "128", \
+     "--worker-connections", "1000", \
+     "--backlog", "1024", \
+     "--max-requests", "10000", \
+     "--max-requests-jitter", "1000", \
+     "--timeout", "300", \
+     "--keepalive", "2", \
+     "--access-logfile", "-", \
+     "--error-logfile", "-", \
+     "app:app"]
