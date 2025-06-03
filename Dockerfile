@@ -37,17 +37,21 @@ ENV PYTHONUNBUFFERED=1
 RUN echo "* soft nofile 65535" >> /etc/security/limits.conf && \
     echo "* hard nofile 65535" >> /etc/security/limits.conf
 
-# Run with Gunicorn optimized for single core
+# Run with Gunicorn optimized for single CPU core
 CMD ["gunicorn", "--bind", "0.0.0.0:5050", \
-     "--workers", "4", \
+     "--workers", "2", \
      "--worker-class", "gthread", \
      "--threads", "128", \
-     "--worker-connections", "1000", \
-     "--backlog", "1024", \
+     "--worker-connections", "500", \
+     "--backlog", "500", \
      "--max-requests", "10000", \
      "--max-requests-jitter", "1000", \
      "--timeout", "300", \
      "--keep-alive", "2", \
+     "--graceful-timeout", "10", \
+     "--worker-tmp-dir", "/dev/shm", \
+     "--preload", \
      "--access-logfile", "-", \
      "--error-logfile", "-", \
+     "--limit-request-line", "0", \
      "app:app"]
