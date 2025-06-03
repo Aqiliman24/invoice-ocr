@@ -41,7 +41,7 @@ RUN echo "* soft nofile 65535" >> /etc/security/limits.conf && \
 CMD ["gunicorn", "--bind", "0.0.0.0:5050", \
      "--workers", "2", \
      "--worker-class", "gthread", \
-     "--threads", "128", \ 
+     "--threads", "128", \
      "--worker-connections", "500", \
      "--backlog", "500", \
      "--max-requests", "10000", \
