@@ -6,17 +6,19 @@ from io import BytesIO
 import pdf2image
 import PyPDF2
 
-def validate_file(filename):
+def allowed_file(filename, allowed_extensions=None):
     """
-    Validate that the file is one of the supported types: PDF, PNG, JPG, or JPEG
+    Validate that the file is one of the supported types
     
     Args:
         filename (str): The name of the file to validate
+        allowed_extensions (set): Set of allowed file extensions. If None, defaults to PDF, PNG, JPG, JPEG
         
     Returns:
         bool: True if the file is valid, False otherwise
     """
-    allowed_extensions = {'pdf', 'png', 'jpg', 'jpeg'}
+    if allowed_extensions is None:
+        allowed_extensions = {'pdf', 'png', 'jpg', 'jpeg'}
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in allowed_extensions
 

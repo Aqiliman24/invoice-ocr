@@ -7,8 +7,8 @@ from io import BytesIO
 from pdf2image import convert_from_path
 import argparse
 
-API_URL = 'https://ai.medkad.com/ocr/api/extract-total'
-# API_URL = 'http://localhost:5050/extract-total'
+# API_URL = 'https://ai.medkad.com/ocr/api/extract-total'
+API_URL = 'http://localhost:5050/extract-total'
 SUPPORTED_EXTS = {'.pdf', '.png', '.jpg', '.jpeg'}
 
 CLAIMS_DIR = 'failed-claims'
@@ -78,6 +78,7 @@ def main():
         total_amount = result.get('total_amount', 'N/A')
         handwriting = result.get('handwriting', None)
         date = result.get('date', 'N/A')
+        bill_to = result.get('bill_to', None)
 
         # Fix: If total_amount is a string containing JSON, parse it
         if isinstance(total_amount, str) and total_amount.strip().startswith('{'):
@@ -87,6 +88,7 @@ def main():
                 total_amount = parsed.get('total_amount', total_amount)
                 handwriting = parsed.get('handwriting', handwriting)
                 date = parsed.get('date', date)
+                bill_to = parsed.get('bill_to', bill_to)
             except Exception:
                 pass
         img_data_url = file_to_display_base64(filepath)
@@ -94,6 +96,7 @@ def main():
             'filename': os.path.basename(filepath),
             'total_amount': total_amount,
             'handwriting': handwriting,
+            'bill_to': bill_to,
             'img_data_url': img_data_url,
             'error': None,
             'time_taken': elapsed
@@ -104,7 +107,8 @@ def main():
         results.append(result_data)
         handwriting_str = f", Handwritten: {handwriting}" if handwriting is not None else ""
         date_str = f", Date: {date}" if date != 'N/A' else ""
-        print(f"OK (Time: {elapsed:.2f}s){handwriting_str}{date_str}")
+        bill_to_str = f", Bill To: {bill_to}" if bill_to is not None else ""
+        print(f"OK (Time: {elapsed:.2f}s){handwriting_str}{date_str}{bill_to_str}")
 
     # Generate HTML report
     html = '''
@@ -138,11 +142,15 @@ def main():
         date_html = ''
         if 'date' in r:
             date_html = f'<div class="value" style="font-size:1em;color:#555;">Date: {r["date"]}</div>'
+        bill_to_html = ''
+        if r.get('bill_to') is not None:
+            bill_to_html = f'<div class="value" style="font-size:1em;color:#555;">Bill To: {r["bill_to"]}</div>'
         html += f'''<div class="card">
             <div class="filename">{r['filename']}</div>
             <div class="value">{r['total_amount']}</div>
             {handwriting_html}
             {date_html}
+            {bill_to_html}
             <div class="value" style="font-size:1em;color:#555;">Time: {r['time_taken']:.2f}s</div>
             {'<div class="error">'+r['error']+'</div>' if r['error'] else ''}
             {f'<img src="{r["img_data_url"]}" class="img-preview" alt="Invoice Preview" />' if r['img_data_url'] else ''}

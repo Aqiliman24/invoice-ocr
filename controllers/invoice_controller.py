@@ -1,5 +1,5 @@
 from services.invoice_service import process_invoice
-from utils.file_utils import validate_file
+from utils.file_utils import allowed_file
 from werkzeug.utils import secure_filename
 
 def extract_invoice_total(file, mode="base64"):
@@ -15,14 +15,14 @@ def extract_invoice_total(file, mode="base64"):
     Raises:
         ValueError: If the file is invalid or processing fails
     """
-    # Validate file type
+    # allowed file type
     filename = secure_filename(file.filename)
-    if not validate_file(filename):
+    if not allowed_file(filename):
         raise ValueError(f"Invalid file format. Supported formats: PDF, PNG, JPG, JPEG")
     
     try:
         # Process the invoice using the service layer
-        total_amount, date, handwriting = process_invoice(file)
+        total_amount, date, handwriting, bill_to = process_invoice(file)
         
         # Parse total_amount to float if possible
         if isinstance(total_amount, str):
@@ -41,7 +41,8 @@ def extract_invoice_total(file, mode="base64"):
         return {    
             "handwriting": handwriting,
             "total_amount": total_amount_value,
-            "date": date
+            "date": date,
+            "bill_to": bill_to
         }
     except Exception as e:
         raise ValueError(f"Error processing invoice: {str(e)}")

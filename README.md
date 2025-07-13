@@ -31,7 +31,7 @@ A Flask-based backend API that extracts the total amount from invoice files usin
    ```
 4. create enviroment variables:
    ```
-   python3.11 -m venv venv
+   python3.10 -m venv venv
    source venv/bin/activate
    pip install -r requirements.txt
    ```   
@@ -107,7 +107,10 @@ invoice-ocr/
 
 ### Single Container
 ```bash
+# Build the Docker image
 docker build -t invoice-extractor .
+
+# Run the container
 docker run --env-file .env -p 5050:5050 invoice-extractor
 ```
 

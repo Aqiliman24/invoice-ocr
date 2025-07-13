@@ -14,7 +14,7 @@ def extract_total_with_gpt(images_data, system_prompt=None, max_retries=2):
         max_retries: Number of retry attempts
         
     Returns:
-        tuple: (total_amount, handwriting)
+        tuple: (total_amount, date, handwriting, bill_to)
     """
     if not images_data:
         raise ValueError("No image data provided")
@@ -67,7 +67,8 @@ def extract_total_with_gpt(images_data, system_prompt=None, max_retries=2):
             return (
                 result.get('total_amount'),
                 result.get('date'),
-                result.get('handwriting', False)
+                result.get('handwriting', False),
+                result.get('bill_to', False)
             )
             
         except Exception as e:
@@ -86,11 +87,12 @@ def process_invoice(file, initial_pages=1, fallback_pages=3, prioritize_last_pag
         prioritize_last_page: If True, process last page first (default: False)
         
     Returns:
-        tuple: (total_amount, date, handwriting)
+        tuple: (total_amount, date, handwriting, bill_to)
     """
     # Initialize variables with default values
     date = None
     handwriting = False
+    bill_to = False
     
     def reset_file():
         if hasattr(file, 'seek'):
@@ -108,13 +110,12 @@ def process_invoice(file, initial_pages=1, fallback_pages=3, prioritize_last_pag
                 try:
                     # Try just the last page
                     page_images = convert_to_base64(file)
-                    total_amount, date, handwriting = extract_total_with_gpt(
+                    result = extract_total_with_gpt(
                         images_data=page_images,
                         max_retries=1
                     )
-                    
-                    if total_amount is not None:
-                        return total_amount, date, handwriting
+                    if result[0] is not None:  # Check total_amount
+                        return result
                 except Exception as e:
                     print(f"Last page attempt failed: {str(e)}")
                     reset_file()
@@ -128,14 +129,14 @@ def process_invoice(file, initial_pages=1, fallback_pages=3, prioritize_last_pag
         first_page_images = convert_to_base64(file, page_range=(1, 1))
         
         # Extract with GPT
-        total_amount, date, handwriting = extract_total_with_gpt(
+        result = extract_total_with_gpt(
             images_data=first_page_images,
             max_retries=1
         )
         
         # If we got a valid amount, return it
-        if total_amount is not None and total_amount != "N/A":
-            return total_amount, date, handwriting
+        if result[0] is not None and result[0] != "N/A":  # Check total_amount
+            return result
     except Exception as e:
         print(f"First page attempt failed: {str(e)}")
         reset_file()
@@ -148,12 +149,12 @@ def process_invoice(file, initial_pages=1, fallback_pages=3, prioritize_last_pag
                 reset_file()
                 # Try the last page
                 last_page_images = convert_to_base64(file, page_range=(total_pages, total_pages))
-                total_amount, date, handwriting = extract_total_with_gpt(
+                result = extract_total_with_gpt(
                     images_data=last_page_images,
                     max_retries=1
                 )
-                if total_amount is not None and total_amount != "N/A":
-                    return total_amount, date, handwriting
+                if result[0] is not None and result[0] != "N/A":  # Check total_amount
+                    return result
         except Exception as e:
             print(f"Last page attempt failed: {str(e)}")
             reset_file()
@@ -163,15 +164,15 @@ def process_invoice(file, initial_pages=1, fallback_pages=3, prioritize_last_pag
         try:
             reset_file()
             page_images = convert_to_base64(file, page_range=(1, fallback_pages))
-            total_amount, date, handwriting = extract_total_with_gpt(
+            result = extract_total_with_gpt(
                 images_data=page_images,
                 max_retries=2
             )
-            if total_amount is not None and total_amount != "N/A":
-                return total_amount, date, handwriting
+            if result[0] is not None and result[0] != "N/A":  # Check total_amount
+                return result
         except Exception as e:
             print(f"Fallback attempt failed: {str(e)}")
             reset_file()
     
     # Return None for total_amount if no valid amount found
-    return None, date, handwriting
+    return (None, date, handwriting, bill_to)

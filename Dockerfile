@@ -6,12 +6,6 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         poppler-utils \
         gcc \
-        libglib2.0-0 \
-        libsm6 \
-        libxext6 \
-        libxrender-dev \
-        curl \
-        ghostscript \
         qpdf \
         pdftk \
     && rm -rf /var/lib/apt/lists/*
