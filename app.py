@@ -1,5 +1,6 @@
 from flask import Flask, jsonify
 from routes.invoice_routes import invoice_bp
+from routes.do_routes import do_bp
 import os
 from dotenv import load_dotenv
 import argparse
@@ -15,6 +16,7 @@ app = Flask(__name__)
 
 # Register blueprints
 app.register_blueprint(invoice_bp)
+app.register_blueprint(do_bp)
 
 # Add health check endpoint
 @app.route('/health')
