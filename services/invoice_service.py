@@ -76,15 +76,14 @@ def extract_total_with_gpt(images_data, system_prompt=None, max_retries=2):
                 raise Exception(f"Failed after {max_retries} attempts: {str(e)}")
             time.sleep(1)  # Wait before retry
 
-def process_invoice(file, initial_pages=1, fallback_pages=3, prioritize_last_page=False):
+def process_invoice(file, initial_pages=1, fallback_pages=3):
     """
-    Process an invoice with a two-step approach, optionally prioritizing the last page
+    Process an invoice, handling both single and multi-page formats
     
     Args:
         file: The uploaded file object
-        initial_pages: Number of pages to try first (default: 1)
-        fallback_pages: Number of pages to try if first attempt fails (default: 3)
-        prioritize_last_page: If True, process last page first (default: False)
+        initial_pages: Number of pages to try if first attempt fails (default: 1)
+        fallback_pages: Number of pages to try if other attempts fail (default: 3)
         
     Returns:
         tuple: (total_amount, date, handwriting, bill_to)
@@ -98,67 +97,76 @@ def process_invoice(file, initial_pages=1, fallback_pages=3, prioritize_last_pag
         if hasattr(file, 'seek'):
             file.seek(0)
     
-    # If we're prioritizing the last page and it's a PDF
-    if prioritize_last_page and hasattr(file, 'filename') and file.filename.lower().endswith('.pdf'):
+    # Check if it's a PDF file
+    is_pdf = hasattr(file, 'filename') and file.filename.lower().endswith('.pdf')
+    
+    if is_pdf:
         try:
             # Get total pages
             total_pages = get_pdf_page_count(file)
             
-            # If we have a PDF with multiple pages, process the last page first
-            if total_pages > 1:
+            # For single-page PDFs, process the only page
+            if total_pages == 1:
+                reset_file()
+                page_images = convert_to_base64(file, page_range=(1, 1))
+                result = extract_total_with_gpt(
+                    images_data=page_images,
+                    max_retries=2
+                )
+                if result[0] is not None and result[0] != "N/A":
+                    return result
+            
+            # For multi-page PDFs, always check the last page first
+            elif total_pages > 1:
                 reset_file()
                 try:
                     # Try just the last page
-                    page_images = convert_to_base64(file)
+                    page_images = convert_to_base64(file, page_range=(total_pages, total_pages))
                     result = extract_total_with_gpt(
                         images_data=page_images,
-                        max_retries=1
+                        max_retries=2
                     )
-                    if result[0] is not None:  # Check total_amount
+                    if result[0] is not None and result[0] != "N/A":
                         return result
                 except Exception as e:
                     print(f"Last page attempt failed: {str(e)}")
                     reset_file()
         except Exception as e:
-            print(f"Error processing last page first: {str(e)}")
+            print(f"Error processing PDF: {str(e)}")
             reset_file()
     
-    # Try first page
+    # For non-PDFs or if PDF processing failed, try first page
     try:
         reset_file()
         first_page_images = convert_to_base64(file, page_range=(1, 1))
-        
-        # Extract with GPT
         result = extract_total_with_gpt(
             images_data=first_page_images,
-            max_retries=1
+            max_retries=2
         )
-        
-        # If we got a valid amount, return it
-        if result[0] is not None and result[0] != "N/A":  # Check total_amount
+        if result[0] is not None and result[0] != "N/A":
             return result
     except Exception as e:
         print(f"First page attempt failed: {str(e)}")
         reset_file()
-
-    # If first page didn't have total, check if it's a PDF with multiple pages
+    
+    # If first page didn't work, try last page for PDFs
     if hasattr(file, 'filename') and file.filename.lower().endswith('.pdf'):
         try:
+            reset_file()
             total_pages = get_pdf_page_count(file)
-            if total_pages > 1:
-                reset_file()
-                # Try the last page
+            if total_pages > 0:
+                # Always try the last page first for PDFs
                 last_page_images = convert_to_base64(file, page_range=(total_pages, total_pages))
                 result = extract_total_with_gpt(
                     images_data=last_page_images,
-                    max_retries=1
+                    max_retries=2  # Increased retries for better reliability
                 )
                 if result[0] is not None and result[0] != "N/A":  # Check total_amount
                     return result
         except Exception as e:
             print(f"Last page attempt failed: {str(e)}")
             reset_file()
-    
+
     # If both first and last page failed, try with more pages as fallback
     if fallback_pages > initial_pages:
         try:
